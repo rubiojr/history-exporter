@@ -59,12 +59,16 @@ cp(db_path, tmp_db)
 
 history := []
 db := sql.connect(tmp_db)
-res := db.query("SELECT url, title, visit_count, description FROM moz_places").each(func(row) {
+res := db.query("SELECT p.id, p.url, p.title, p.visit_count, p.description, h.visit_date FROM moz_places p INNER JOIN moz_historyvisits h ON p.id = h.place_id").each(func(row) {
+  id := row["id"]
   url := row["url"]
   title := row["title"]
   visits := row["visit_count"]
   description := row["description"]
-  history.append({url: url, title: title, visits: visits, description: description})
+
+  // Firefox stores timestamps in microseconds
+  visit_date := time.unix(row["visit_date"]/1000000, 0)
+  history.append({ id: id, url: url, title: title, visits: visits, description: description, visit_date: visit_date })
 })
 
 print(json.marshal(history))
