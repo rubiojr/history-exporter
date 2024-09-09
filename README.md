@@ -30,3 +30,17 @@ Exporting LibreWolf flatpak history:
 ```
 history-exporter ~/.var/app/io.gitlab.librewolf-community/.librewolf > history-librewolf.json
 ```
+
+## Sample output format:
+
+```
+❯ ./history-exporter $HOME/.mozilla/firefox/ | jq .[0]
+{
+  "description": "Guides, information, and news about the Fedora operating system for users, developers, system administrators, and community members.",
+  "id": 6,
+  "title": "Fedora Magazine - Guides, information, and news about the Fedora operating system for users, developers, system administrators, and community members.",
+  "url": "https://fedoramagazine.org/",
+  "visit_date": "2024-08-13T16:38:30+02:00",
+  "visits": 1
+}
+```
