@@ -1,0 +1,70 @@
+import rsx
+import sql
+import os
+import regexp
+import strings
+import json
+
+//
+// Usage: history-exporter <browser_dir>
+//
+// Common browser directories:
+//
+// Zen flatpak (Linux)
+// $HOME/.var/app/io.github.zen_browser.zen/.zen
+//
+// Firefox (Linux)
+// $HOME/.mozilla/firefox
+//
+// Firefox flatpak (Linux)
+// $HOME/.var/app/org.mozilla.firefox/.mozilla/firefox
+
+// LibreWolf flatpak (Linux)
+// $HOME/.var/app/io.gitlab.librewolf-community/.librewolf
+//
+
+args := os.args()
+if len(args) < 2 {
+  print("Usage: history-exporter <browser_dir>")
+  os.exit(1)
+}
+
+browser_dir := args[1]
+if !rsx.is_dir(browser_dir) {
+  print("Invalid browser storage directory.")
+  os.exit(1)
+}
+
+profiles_ini := filepath.join(browser_dir, "profiles.ini")
+if !rsx.is_file(profiles_ini) {
+  print("Browser profiles.ini not found.")
+  os.exit(1)
+}
+
+func defaut_profile(browser_dir) {
+  profile := ''
+  rsx.grep(profiles_ini, 'Default=').each(func(line) {
+    if !regexp.match(`Default(\s)*=(\s)*1`, line) {
+      profile = strings.trim_space(line.split('=')[1])
+    }
+  })
+
+  return profile
+}
+
+db_path := filepath.join(browser_dir, defaut_profile(browser_dir), 'places.sqlite')
+tmp_dir := os.mkdir_temp(os.temp_dir(), "fhexporter")
+tmp_db := filepath.join(tmp_dir, 'places.sqlite')
+cp(db_path, tmp_db)
+
+history := []
+db := sql.connect(tmp_db)
+res := db.query("SELECT url, title, visit_count, description FROM moz_places").each(func(row) {
+  url := row["url"]
+  title := row["title"]
+  visits := row["visit_count"]
+  description := row["description"]
+  history.append({url: url, title: title, visits: visits, description: description})
+})
+
+print(json.marshal(history))
