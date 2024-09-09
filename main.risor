@@ -23,6 +23,10 @@ import json
 // $HOME/.var/app/io.gitlab.librewolf-community/.librewolf
 //
 
+func debug() {
+  return os.getenv("RSX_DEBUG") != ""
+}
+
 args := os.args()
 if len(args) < 2 {
   print("Usage: history-exporter <browser_dir>")
@@ -41,6 +45,15 @@ if !rsx.is_file(profiles_ini) {
   os.exit(1)
 }
 
+func cleanup(dir) {
+  rsx.debug('Cleaning up {dir}')
+  if debug() {
+    rsx.debug('Debug enabled, not removing temp dir {dir}')
+    return
+  }
+  os.remove_all(dir)
+}
+
 func defaut_profile(browser_dir) {
   profile := ''
   rsx.grep(profiles_ini, 'Default=').each(func(line) {
@@ -52,23 +65,30 @@ func defaut_profile(browser_dir) {
   return profile
 }
 
-db_path := filepath.join(browser_dir, defaut_profile(browser_dir), 'places.sqlite')
-tmp_dir := os.mkdir_temp(os.temp_dir(), "fhexporter")
-tmp_db := filepath.join(tmp_dir, 'places.sqlite')
-cp(db_path, tmp_db)
+func main() {
+  db_path := filepath.join(browser_dir, defaut_profile(browser_dir), 'places.sqlite')
+  tmp_dir := os.mkdir_temp(os.temp_dir(), "fhexporter")
+  defer cleanup(tmp_dir)
 
-history := []
-db := sql.connect(tmp_db)
-res := db.query("SELECT p.id, p.url, p.title, p.visit_count, p.description, h.visit_date FROM moz_places p INNER JOIN moz_historyvisits h ON p.id = h.place_id").each(func(row) {
-  id := row["id"]
-  url := row["url"]
-  title := row["title"]
-  visits := row["visit_count"]
-  description := row["description"]
+  tmp_db := filepath.join(tmp_dir, 'places.sqlite')
+  cp(db_path, tmp_db)
 
-  // Firefox stores timestamps in microseconds
-  visit_date := time.unix(row["visit_date"]/1000000, 0)
-  history.append({ id: id, url: url, title: title, visits: visits, description: description, visit_date: visit_date })
-})
+  history := []
+  db := sql.connect(tmp_db)
+  res := db.query("SELECT p.id, p.url, p.title, p.visit_count, p.description, h.visit_date FROM moz_places p INNER JOIN moz_historyvisits h ON p.id = h.place_id").each(func(row) {
+    id := row["id"]
+    url := row["url"]
+    title := row["title"]
+    visits := row["visit_count"]
+    description := row["description"]
 
-print(json.marshal(history))
+    // Firefox stores timestamps in microseconds
+    visit_date := time.unix(row["visit_date"]/1000000, 0)
+    history.append({ id: id, url: url, title: title, visits: visits, description: description, visit_date: visit_date })
+  })
+
+  print(json.marshal(history))
+
+}
+
+main()
