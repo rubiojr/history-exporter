@@ -1,0 +1,8 @@
+[Unit]
+Description=Export Zen Browser History
+
+[Service]
+ExecStart=/bin/bash -c '/path/to/history-exporter %h/.var/app/io.github.zen_browser.zen/.zen/ > %h/history-zen-$(uname -n)-$(date +%%s).json'
+
+[Install]
+WantedBy=default.target

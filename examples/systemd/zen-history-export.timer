@@ -1,0 +1,14 @@
+#
+# Export Zen browser history every 12 hours to $HOME.
+# Prefix the export file with the node name (hostname) and
+# a Unix timestamp.
+#
+[Unit]
+Description=Exports Zen Browser History
+
+[Timer]
+OnUnitActiveSec=12h
+
+[Install]
+WantedBy=timers.target
+
